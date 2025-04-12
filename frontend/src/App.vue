@@ -6,6 +6,7 @@ import axios from 'axios';
 
 const pago = ref<string>("0.00");
 const totalPagado = ref<string>("0.00");
+const pagadoData = ref<number>(0);
 const porPagar = ref<string>("0.00");
 const porPers = ref<string>("0.00");
 const propData = ref<number>(0);
@@ -14,6 +15,7 @@ const divP = ref<number>(0);
 const personas = ref<number>(0);
 const tipoPago = ref<number>(0);
 const editPropData = ref<boolean>(false);
+const permitido = ref<boolean>(true);
 const loading = ref<boolean>(false);
 const error = ref<string | null>(null);
 const historial = ref<string[]>([]);
@@ -37,24 +39,6 @@ const editProp = (data: string) => {
   }
 };
 
-const fetchMensaje = async () => {
-  try {
-    const response = await axios.get('http://localhost:3001/mensaje',{
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      withCredentials: false
-    });
-    console.log('Respuesta del backend:', response.data);
-  } catch (error) {
-    console.error('Error completo:', error);
-    
-    if (axios.isAxiosError(error)) {
-      console.log('Código de estado HTTP:', error.response?.status);
-      console.log('Mensaje de error:', error.message);
-    }
-  }
-};
 
 const guardarProps = async () => {
   try {
@@ -95,18 +79,20 @@ const enviarPropina = async () => {
       totalPagado: totalPagado.value,
     });
 
-    porPagar.value = response.data.total;
-    totalPagado.value = response.data.pagado;
-    pago.value = '0.00';
-    tipoPago.value = 0;
-    historial.value.push(response.data.text);
-    // console.log('Respuesta del servidor:', response.data);  Restante por Pagar
-    
-    // Puedes resetear los valores después del envío exitoso
-    // totalPagado.value = '0.00';
-    // porPagar.value = '0.00';
-    // porPers.value = '0.00';
-    // personas.value = 0;
+    permitido.value = response.data.permitido;
+
+    if(permitido.value){
+      if(pago.value !== '0.00'){
+        porPagar.value = response.data.total;
+        totalPagado.value = response.data.pagado;
+        pagadoData.value = response.data.totalPag;
+        pago.value = '0.00';
+        tipoPago.value = 0;
+        historial.value.push(response.data.text);
+      }
+    }else{
+      error.value = response.data.alerta;
+    }
 
   } catch (err) {
     if (axios.isAxiosError(err)) {
@@ -142,7 +128,6 @@ const calculoPP = () => {
 
 </script>
 <!-- <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" /> -->
-<!-- <div class="full-viewport"> -->
 <template>
   <div class="full-viewport">
     <h1 class="green">Pago de Propinas</h1>
@@ -260,10 +245,12 @@ const calculoPP = () => {
                 <button type="button" class="btn btn-secondary btn-lg px-4" @click="editProp('.')">.</button>
               </div>
               <div class="col-auto">
-                <!-- <button type="button" class="btn btn-success btn-lg px-4" :disabled="tipoPago==0 && pago!='0.00'" @click="enviarPropina">ok</button> -->
-                <button type="button" class="btn btn-success btn-lg px-4" :disabled="tipoPago==0" @click="enviarPropina">ok</button>
+                <button type="button" class="btn btn-success btn-lg px-4" :disabled="tipoPago === 0" @click="enviarPropina">ok</button>
               </div>
             </div>
+          </div>
+          <div v-if="!permitido" class="alert alert-danger" role="alert">
+            {{ error }} 
           </div>
         </div>
       </div>
@@ -292,7 +279,8 @@ const calculoPP = () => {
         </div>
       </div>
       <div class="col-6 text-center">
-        <button type="button" class="btn btn-outline-secondary btn-lg" @click="fetchMensaje">Pagar Propinas</button>
+        <button v-if="pagadoData === 0" type="button" class="btn btn-outline-secondary btn-lg">Pagar Propinas</button>
+        <button v-else type="button" class="btn btn-outline-danger btn-lg">Pagado ${{ totalPagado }}</button>
       </div>
     </div>
   </div>
@@ -310,12 +298,4 @@ const calculoPP = () => {
   margin: 0;
   padding: 20px;
 }
-
-.black-line {
-  height: 1px;
-  background-color: black;
-  width: 100%;
-  margin-top: 20px;
-}
-
 </style>

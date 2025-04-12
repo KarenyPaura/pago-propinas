@@ -13,14 +13,6 @@ app.use(cors({
 
 app.use(express.json());
 
-app.get('/mensaje', (req, res) => {
-  console.log("DEBUG: Aquí estoy en el backend");
-  res.json({ 
-    status: 'success',
-    mensaje: '¡Backend conectado correctamente!' 
-  });
-});
-
 
 app.post('/guardarProps', (req, res) => {
   const { valor } = req.body;
@@ -38,10 +30,38 @@ app.post('/guardarProps', (req, res) => {
   });
 });
 
+
 app.post('/pago', (req, res) => {
   const { pago, tipoPago, porPagar, totalPagado } = req.body;
   
   let text = '';
+  
+  const valor = parseFloat(pago);
+  const pendiente = parseFloat(porPagar.replace(/,/g, ''));
+  const pagado = parseFloat(totalPagado.replace(/,/g, ''));
+  let total = 0;
+  let totalPag = 0;
+  let permitido = true;
+  let alerta = '';
+
+  if(valor > pendiente){
+    permitido = false;
+    alerta = 'El pago excede la cantidad restante a pagar';
+  }else{
+    total = pendiente - valor;
+    totalPag = pagado + valor;
+  }
+  
+
+  const totalString = total.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+
+  const pagadoString = totalPag.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
 
   switch(tipoPago){
     case 1:  // Efectivo
@@ -55,28 +75,14 @@ app.post('/pago', (req, res) => {
       break;
   }
 
-  const valor = parseFloat(pago);
-  const pendiente = parseFloat(porPagar.replace(/,/g, ''));
-  const total = pendiente - valor;
-  
-  const pagado = parseFloat(totalPagado.replace(/,/g, ''));
-  const totalPag = pagado + valor;
-
-  const totalString = total.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
-
-  const pagadoString = totalPag.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
-
 
   res.json({ 
     text: text,
     total: totalString,
     pagado: pagadoString,
+    permitido: permitido,
+    alerta: alerta,
+    totalPag: totalPag,
   });
 });
 
